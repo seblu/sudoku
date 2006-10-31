@@ -1,0 +1,21 @@
+#!/bin/sh
+## bootstrap for 42sh in /home/seblu/devel/c/42sh
+##
+## Made by Seblu
+## Login   <seblu@epita.fr>
+##
+## Started on  Sun Jul 16 19:43:53 2006 Seblu
+## Last update Sun Jul 16 19:44:01 2006 Seblu
+##
+
+# Failures do matter.
+set -e
+
+# See what i'am doing
+set -x
+
+# install the GNU Build System.
+autoreconf -i -f -v
+
+# FIXME: autoheader does not obey --force.
+find . -name 'config.h.in' | xargs touch
