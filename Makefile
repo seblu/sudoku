@@ -2,10 +2,10 @@
 
 all: sudoku
 
-sudoku: sudoku.o sudoku.hh
-	g++ -Wall -Wextra -pedantic -ansi -g $< -o $@
+sudoku: sudoku.o grid.o
+	g++ -Wall -Wextra -pedantic -ansi -g $^ -o $@
 
-%.o:%.cc
+%.o:%.cc sudoku.hh
 	g++ -Wall -Wextra -pedantic -ansi -g $< -o $@ -c
 
 clean:
