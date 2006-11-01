@@ -17,6 +17,8 @@ int Grid::load(const char *filename)
   for (int y = 0; y < GRID_SIDE; ++y)
     for (int x = 0; x < GRID_SIDE; ++x) {
       fs >> std::dec >> val;
+//       if (val > 0)
+// 	std::cout << "(" << x << "," << y << ")" << " " << val << std::endl;
       if (val < 0 || val > 9) {
 	std::cerr << "Invalid value in file: " << val << std::endl;
 	exit(EXIT_LOADFAIL);
@@ -39,13 +41,18 @@ void Grid::pose(int x, int y, int v)
     std::cerr << "Invalid value: " << v << std::endl;
     exit(EXIT_INV_VAL);
   }
+  if (block_[x][y].is_set()) {
+    std::cerr << "Double positionning: " << x << ", " << y << std::endl;
+    exit(EXIT_INV_VAL);
+  }
+  block_[x][y].set(v);
   for (int i = 0; i < GRID_SIDE; ++i) {
     block_[x][i].forbid(v);
     block_[i][y].forbid(v);
   }
   for (int i = 0; i < 3; ++i)
     for (int j = 0; j < 3; ++j)
-      block_[(x / 3) * 3 + x][(y / 3) * 3 + y].forbid(v);
+      block_[(x / 3) * 3 + i][(y / 3) * 3 + j].forbid(v);
 }
 
 void Grid::resolve()
@@ -56,34 +63,34 @@ void Grid::resolve()
 
 void Grid::print() const
 {
-  int i, j, k;
+  int x, y;
 
-  for (i = 0; i < GRID_SIDE; ++i) {
+  for (y = 0; y < GRID_SIDE; ++y) {
     print_line();
-    if (i > 0 && i % 3 == 0)
+    if (y > 0 && y % 3 == 0)
       print_line();
     if (Grid::advprint) {
-      for (int l = 0; l < 3; ++l) {
-	for (j = 0; j < GRID_SIDE; ++j) {
-	  if (j > 0 && j % 3 == 0)
+      for (int i = 0; i < 3; ++i) {
+	for (x = 0; x < GRID_SIDE; ++x) {
+	  if (x > 0 && x % 3 == 0)
 	    std::cout << "| ";
 	  std::cout << "|";
-	  for (k = l * 3 + 1; k <= l * 3 + 3; ++k)
-	    if (block_[i][j].value_get() == k)
-	      std::cout << "\033[0;32m" << k  << "\033[0m";
-	    else if (block_[i][j].is_forbidden(k))
-	      std::cout << "\033[0;31m" << k  << "\033[0m";
+	  for (int j = i * 3 + 1; j <= i * 3 + 3; ++j)
+	    if (block_[x][y].value_get() == j)
+	      std::cout << "\033[0;32m" << j << "\033[0m";
+	    else if (block_[x][y].is_forbidden(j))
+	      std::cout << "\033[0;31m" << j << "\033[0m";
 	    else
-	      std::cout << k;
+	      std::cout << j;
 	}
 	std::cout <<  "|" << std::endl;
       }
     }
     else {
       std::cout << "|";
-      for (j = 0; j < GRID_SIDE; ++j) {
-	if (j > 0 && j % 3 == 0) std::cout << " |";
-	std::cout << " " << block_[i][j] << " |";
+      for (x = 0; x < GRID_SIDE; ++x) {
+	if (x > 0 && x % 3 == 0) std::cout << " |";
+	std::cout << " " << block_[x][y] << " |";
       }
       std::cout << std::endl;
     }

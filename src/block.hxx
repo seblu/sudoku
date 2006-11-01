@@ -14,7 +14,11 @@ inline Block::Block(int value) {
 
 inline bool Block::is_forbidden(int value) const {
   assert(value > 0 && value <= GRID_SIDE);
-  return forbidden_[value];
+  return forbidden_[value - 1];
+}
+
+inline bool Block::is_set() const {
+  return value_ != 0;
 }
 
 inline int Block::value_get() const
@@ -26,12 +30,13 @@ inline void Block::set(int val)
 {
   assert(val > 0 && val <= GRID_SIDE);
   value_ = val;
+  for (int i = 0; i < GRID_SIDE; ++i)
+    forbidden_[i] = true;
 }
 
 inline void Block::forbid(int val) {
   assert(val > 0 && val <= GRID_SIDE);
-  if (val != value_)
-    forbidden_[val - 1] = true;
+  forbidden_[val - 1] = true;
 }
 
 inline std::ostream &operator<<(std::ostream &stream, const Block &blk) {

@@ -52,10 +52,10 @@ AC_ARG_WITH([noerror],
 AC_ARG_WITH([debug],
   [AS_HELP_STRING([--with-debug], [use -g and don't use -DNDEBUG -O3])],
   [dnl action-if-given
-       CXXFLAGS="$CFLAGS -g"
+       CXXFLAGS="$CXXFLAGS -g"
   ],
   [dnl action-if-not-given
-      CXXFLAGS="$CFLAGS -DNDEBUG -O3"
+      CXXFLAGS="$CXXFLAGS -DNDEBUG -O3"
   ]
 )
 
@@ -63,10 +63,11 @@ AC_ARG_WITH([efence],
   [AS_HELP_STRING([--with-efence], [link with lib efence])],
   [dnl action-if-given
        LDFLAGS="$LDFLAGS -lefence"
+       test -r "/usr/include/efence.h" &&
        CXXFLAGS="$CXXFLAGS -include stdlib.h -include efence.h"
   ],
   [dnl action-if-not-given
-       test "$dynamic" = "true" || LDFLAGS="$LDFLAGS -static"
+       true
   ]
 )
 
