@@ -14,15 +14,15 @@ int Grid::load(const char *filename)
   fs.open(filename, std::fstream::in);
   if (!fs.is_open())
     return 0;
-  for (int i = 0; i < GRID_SIDE; ++i)
-    for (int j = 0; j < GRID_SIDE; ++j) {
+  for (int y = 0; y < GRID_SIDE; ++y)
+    for (int x = 0; x < GRID_SIDE; ++x) {
       fs >> std::dec >> val;
       if (val < 0 || val > 9) {
 	std::cerr << "Invalid value in file: " << val << std::endl;
 	exit(EXIT_LOADFAIL);
       }
       if (val > 0)
-	pose(i, j, val);
+	pose(x, y, val);
       //block_[i][j].set(val);
     }
   fs.close();
@@ -71,7 +71,7 @@ void Grid::print() const
 	  for (k = l * 3 + 1; k <= l * 3 + 3; ++k)
 	    if (block_[i][j].value_get() == k)
 	      std::cout << "\033[0;32m" << k  << "\033[0m";
-	    else if (block_[i][j].is_forbid(k))
+	    else if (block_[i][j].is_forbidden(k))
 	      std::cout << "\033[0;31m" << k  << "\033[0m";
 	    else
 	      std::cout << k;

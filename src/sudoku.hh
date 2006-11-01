@@ -21,29 +21,13 @@ enum {
 class Block
 {
 public:
-  Block() { Block(0); }
-  Block(int value) {
-    value_ = value;
-    for (int i = 0; i < GRID_SIDE; ++i)
-      forbidden_[i] = false;
-  }
-  bool is_forbidden(int value) const {
-    assert(value > 0 && value <= GRID_SIDE);
-    return forbidden_[value];
-  }
-  int value_get() const { return value_; }
-  bool is_forbid(int v) const {
-    assert(v > 0 && v <= GRID_SIDE);
-    return forbidden_[v - 1];
-  }
-  void init(int val) { assert(val >= 0 && val <= GRID_SIDE); value_ = val; }
-  void set(int val) { assert(val > 0 && val <= GRID_SIDE); value_ = val; }
-  void forbid(int val) {
-    assert(val > 0 && val <= GRID_SIDE);
-    if (val != value_)
-      forbidden_[val] = true;
-  }
-  friend std::ostream &operator<<(std::ostream &stream, const Block &blk);
+  inline Block();
+  inline Block(int val);
+  inline bool is_forbidden(int val) const;
+  inline int value_get() const;
+  inline void set(int val);
+  inline void forbid(int val);
+  inline friend std::ostream &operator<<(std::ostream &stream, const Block &blk);
 private:
   int value_;
   bool forbidden_[GRID_SIDE];
@@ -75,5 +59,7 @@ void Grid::print_line() const
       std::cout << std::endl;
   }
 }
+
+#include "block.hxx"
 
 #endif

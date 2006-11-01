@@ -30,10 +30,3 @@ int main(int argc, char *argv[])
   return found;
 }
 
-std::ostream &operator<<(std::ostream &stream, const Block &blk) {
-  if (blk.value_ == 0)
-    stream << " ";
-  else
-    stream << blk.value_;
-  return stream;
-}
