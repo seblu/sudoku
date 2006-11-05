@@ -1,20 +1,23 @@
 #include <stdlib.h>
+#include <unistd.h>
 #include "sudoku.hh"
+
+inline static void usage();
 
 int main(int argc, char *argv[])
 {
-  int found;
+  int opt;
 
-  if (argc != 2 && argc !=3) {
-    std::cerr << "Usage: sudoku [-v] file" << std::endl;
-    return EXIT_USAGE;
-  }
-  if (argc == 3 && argv[1] == (std::string) "-v")
-    Grid::verbose = true;
-  if (argc == 3 && argv[1] == (std::string) "-p")
-    Grid::advprint = true;
+  if (argc != 2 && argc !=3)
+    usage();
+  while ((opt = getopt(argc, argv, "vx")) != -1)
+    switch (opt) {
+    case 'v': Grid::verbose = true; break;
+    case 'x': Grid::advprint = true; break;
+    default: usage();
+    }
   Grid *grid = new Grid();
-  if (!grid->load(argv[Grid::verbose || Grid::advprint ? 2 : 1])) {
+  if (!grid->load(argv[optind])) {
     std::cerr << "Loading failed !" << std::endl;
     return EXIT_LOADFAIL;
   }
@@ -23,10 +26,20 @@ int main(int argc, char *argv[])
     grid->print();
   }
   grid->resolve();
-  found = grid->verify() ? EXIT_FOUND : EXIT_NOTFOUND;
-  if (found == EXIT_FOUND && Grid::verbose > 0)
-    std::cout << "Solution found." << std::endl;
   grid->print();
-  return found;
+  if (grid->verify()) {
+    if (Grid::verbose)
+      std::cout << "Solution found." << std::endl;
+    return EXIT_FOUND;
+  }
+  std::cout << "No suitable solution found." << std::endl;
+  return EXIT_NOTFOUND;
 }
 
+inline static void usage()
+{
+  std::cerr << "Usage: sudoku [-vx] file" << std::endl;
+  std::cerr << "Options:   -v: Verbose mode" << std::endl;
+  std::cerr << "           -x: eXtended print mode" << std::endl;
+  exit(EXIT_USAGE);
+}

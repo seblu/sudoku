@@ -21,11 +21,11 @@ enum {
 class Block
 {
 public:
-  inline Block();
   inline Block(int val);
   inline bool is_forbidden(int val) const;
+  inline int forbidden_count() const;
   inline bool is_set() const;
-  inline int value_get() const;
+  inline int get() const;
   inline void set(int val);
   inline void forbid(int val);
   inline friend std::ostream &operator<<(std::ostream &stream, const Block &blk);
