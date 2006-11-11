@@ -2,7 +2,7 @@
 AC_PREREQ(2.59)
 
 # Auto conf init
-AC_INIT([sudoku],[1.0],[seblu@seblu.net], [sudoku])
+AC_INIT([sudoku],[1.0],[seblu@seblu.net],[sudoku])
 
 # Define configure generator directory
 AC_CONFIG_AUX_DIR([build])
@@ -45,7 +45,7 @@ AC_ARG_WITH([noerror],
        true
   ],
   [dnl action-if-not-given
-       CXXFLAGS="$CFLAGS -Werror"
+       CXXFLAGS="$CXXFLAGS -Werror"
   ]
 )
 
@@ -74,8 +74,10 @@ AC_ARG_WITH([efence],
 AC_SUBST([CXXFLAGS])
 AC_SUBST([LDFLAGS])
 
-# define Autoconf config header
+AC_HEADER_STDC
+
 AC_CONFIG_HEADERS([config.h])
+AC_CHECK_HEADERS([stdlib.h])
 
 # define Autoconf config files
 AC_CONFIG_FILES([

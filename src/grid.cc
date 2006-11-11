@@ -3,7 +3,7 @@
 bool Grid::verbose = false;
 bool Grid::advprint = false;
 
-int Grid::load(const char *filename)
+void Grid::load(const char *filename) throw (Error)
 {
   int val;
   std::fstream fs;
@@ -12,70 +12,89 @@ int Grid::load(const char *filename)
   if (Grid::verbose)
     std::cout << "Loading file: " << filename << "..." << std::endl;
   fs.open(filename, std::fstream::in);
-  if (!fs.is_open())
-    return 0;
-  for (int y = 0; y < GRID_SIDE; ++y)
-    for (int x = 0; x < GRID_SIDE; ++x) {
-      fs >> std::dec >> val;
-      if (val < 0 || val > 9) {
-	std::cerr << "Invalid value in file: " << val << std::endl;
-	exit(EXIT_LOADFAIL);
+  if (!fs) {
+    Error e("Unable to open file: ", EXIT_LOADFAIL);
+    e << filename;
+    throw e;
+  }
+  try {
+    for (int y = 0; y < GRID_SIDE; ++y)
+      for (int x = 0; x < GRID_SIDE; ++x) {
+	fs >> std::dec >> val;
+	if (val < 0 || val > 9) {
+	  Error e;
+	  e << "Invalid value: " << val << " in file: " << filename;
+	  throw e;
+	}
+	if (val > 0)
+	  pose(x, y, val);
       }
-      if (val > 0)
-	pose(x, y, val);
-    }
+  }
+  catch (Error &e) {
+    e.code(EXIT_LOADFAIL);
+    e >> "'.\nReason: " >> filename >> "Load fail in file: '";
+    e << "\nYour grid is incorrect!";
+    fs.close();
+    throw;
+  }
   fs.close();
-  return 1;
 }
 
-void Grid::pose(int x, int y, int v)
+void Grid::pose(int x, int y, int v) throw (Error)
 {
+  Error e;
+
   if (x < 0 || x >= GRID_SIDE || y < 0 || y >= GRID_SIDE) {
-    std::cerr << "Invalid position: " << x + 1 << ", " << y + 1 << std::endl;
-    exit(EXIT_INV_POS);
-  }
-  if (v <= 0 || v > GRID_SIDE) {
-    std::cerr << "Invalid value: " << v << std::endl;
-    exit(EXIT_INV_VAL);
-  }
-  if (block_[x][y].is_set()) {
-    std::cerr << "Double positionning: " << x << ", " << y << std::endl;
-    exit(EXIT_INV_VAL);
+    e << "Invalid position: " << x + 1 << ", " << y + 1;
+    e.code(EXIT_INV_POS);
+    throw e;
   }
   try {
     block_[x][y].set(v);
   }
-  catch (std::string s) {
-    std::cerr << "Unable to pose " << v << " in (" << x << "," << y << "): "
-	      << s << std::endl;
-    throw 2;
+  catch (const Error &er) {
+    e << "Unable to pose " << v << " in (" << x + 1 << "," << y + 1 << "): "
+      << er.message();
+    e.code(er.code());
+    throw e;
   }
   for (int i = 0; i < GRID_SIDE; ++i) {
     try {
-      block_[x][i].forbid(v);
+      if (i != y)
+	block_[x][i].forbid(v);
     }
-    catch (std::string s) {
-      std::cerr << "Unable to forbid " << v << " in (" << x << "," << y << "): "
-		<< s << std::endl;
+    catch (Error &e) {
+      e << " During seting case (" << x + 1 << "," << y + 1 << "), unable to forbid "
+	<< v << " in (" << x + 1 << "," << i + 1 << ").";
+      throw e;
     }
     try {
-      block_[i][y].forbid(v);
+      if (i != x)
+	block_[i][y].forbid(v);
     }
-    catch (std::string s) {
-      std::cerr << "Unable to forbid " << v << " in (" << x << "," << y << "): "
-		<< s << std::endl;
+    catch (Error &e) {
+      e << " During seting case (" << x + 1 << "," << y + 1 << "), unable to forbid "
+	<< v << " in (" << i + 1 << "," << y + 1 << ").";
+      throw e;
     }
   }
   for (int i = 0; i < 3; ++i)
-    for (int j = 0; j < 3; ++j)
-      {
-      std::cout << "forbid x:"<< x << ", y:" << y << ",i:" <<i <<",j;" <<j <<std::endl;
-      block_[(x / 3) * 3 + i][(y / 3) * 3 + j].forbid(v);
-
+    for (int j = 0; j < 3; ++j) {
+      int a = (x / 3) * 3 + i;
+      int b = (y / 3) * 3 + j;
+      try {
+	if (!(x == a && y == b))
+	  block_[a][b].forbid(v);
       }
+      catch (Error &e) {
+	e << " During seting case (" << x + 1 << "," << y + 1 << "), unable to forbid "
+	  << v << " in (" << a + 1 << "," << b + 1 << ").";
+	throw e;
+      }
+    }
 }
 
-void Grid::resolve()
+void Grid::solve()
 {
   int posed;
 
@@ -83,26 +102,101 @@ void Grid::resolve()
     std::cout << "Resolving..." << std::endl;
   do {
     posed = 0;
-    for (int y = 0; y < GRID_SIDE; ++y)
-      for (int x = 0; x < GRID_SIDE; ++x) {
-	if (block_[x][y].is_set())
-	  continue;
-	//check for complete block
-	int count = 0, lastval;
-	for (int i = 1; i <= GRID_SIDE; ++i)
-	  if (!block_[x][y].is_forbidden(i)) {
-	    ++count;
-	    lastval = i;
-	}
-	if (count == 1) {
-	  pose(x, y, lastval);
-	  if (Grid::verbose)
-	    std::cout << "posed " << lastval << " to " << x << ","<< y << std::endl;
+    posed += solve_complete_block();
+    posed += solve_square();
+    posed += solve_line();
+  }
+  while (posed > 0);
+}
+
+int Grid::solve_complete_block()
+{
+  int posed = 0;
+
+  for (int y = 0; y < GRID_SIDE; ++y)
+    for (int x = 0; x < GRID_SIDE; ++x) {
+      if (block_[x][y].is_set())
+	continue;
+      int count = 0, lastval;
+      for (int i = 1; i <= GRID_SIDE; ++i)
+	if (!block_[x][y].is_forbidden(i)) {
+	  ++count;
+	  lastval = i;
+	  }
+      if (count == 1) {
+	pose(x, y, lastval);
+	if (Grid::verbose)
+	  std::cout << "Seting " << lastval << " to " << x << ","<< y << std::endl;
+	++posed;
+      }
+    }
+  return posed;
+}
+
+int Grid::solve_square()
+{
+  int posed = 0;
+
+  for (int v = 1; v <= GRID_SIDE; ++v)
+    for (int i = 0; i < GRID_SIDE; i += 3)
+      for (int j = 0; j < GRID_SIDE; j += 3) {
+	int v_count = 0;
+	int x,y;
+	for (int k = i; k < 3; ++k)
+	  for (int l = j; l < 3; ++l)
+	    if (!block_[k][l].is_forbidden(v)) {
+	      x = k;
+	      y = l;
+	      ++v_count;
+	    }
+	if (v_count == 1) {
+	  std::cerr << "found " << v << " with solve_square in (" << x + 1
+		    << "," << y + 1 << ")\n";
+	  pose(x, y, v);
 	  ++posed;
 	}
       }
-  }
-  while (posed > 0);
+  return posed;
+}
+
+int Grid::solve_line()
+{
+  int posed = 0;
+
+  for (int v = 1; v <= GRID_SIDE; ++v) //each val
+    for (int i = 0; i < GRID_SIDE; ++i) { //each line and column
+      int horizontal_count = 0, horizontal_x, horizontal_y;
+      int vertical_count = 0, vertical_x, vertical_y;
+      for (int j = 0; j < GRID_SIDE; ++j) {
+	if (!block_[i][j].is_forbidden(v)) {
+	  horizontal_x = i;
+	  horizontal_y = j;
+	  ++horizontal_count;
+	}
+	if (!block_[j][i].is_forbidden(v)) {
+	  vertical_x = j;
+	  vertical_y = i;
+	  ++vertical_count;
+	}
+      }
+      if (horizontal_count == 1) {
+	std::cerr << "found " << v << " with solve_line_h in ("
+		  << horizontal_x + 1
+		  << "," << horizontal_y + 1 << ")" << std::endl;
+	pose(horizontal_x, horizontal_y, v);
+	++posed;
+      }
+      if (vertical_count == 1) {
+	if (!(horizontal_x == vertical_x && horizontal_y == vertical_y)) {
+	  std::cerr << "found " << v << " with solve_line_v in ("
+		    << vertical_x + 1
+		    << "," << vertical_y + 1 << ")" << std::endl;
+	  pose(vertical_x, vertical_y, v);
+	  ++posed;
+	}
+      }
+    }
+  return posed;
 }
 
 void Grid::print() const
@@ -142,16 +236,7 @@ void Grid::print() const
   print_line();
 }
 
-bool Grid::is_done() const
-{
-  for (int i = 0; i < GRID_SIDE; ++i)
-    for (int j = 0; j < GRID_SIDE; ++j)
-      if (block_[i][j].get() == 0)
-	return false;
-  return true;
-}
-
-bool Grid::verify() const
+bool Grid::check(sstream &info) const
 {
   bool vertical_line[GRID_SIDE];
   bool horizontal_line[GRID_SIDE];
@@ -162,37 +247,85 @@ bool Grid::verify() const
     for (int j = 0; j < GRID_SIDE; ++j)
       horizontal_line[j] = vertical_line[j] = false;
     for (int j = 0; j < GRID_SIDE; ++j) {
-      //horizontals
+
+      //horizontals (lines)
+
       tmp = block_[i][j].get() - 1;
-      if (tmp < 0 || horizontal_line[tmp])
+      //check for empty block
+      if (tmp == - 1) {
+	info << "Grid is incomplete.";
 	return false;
+      }
+      //check for crazy digits
+      if (tmp < 0 || tmp > GRID_SIDE) {
+	info << "Bad value " << tmp << " in (" << i + 1 << "," << j + 1
+	     << ")." << std::endl;
+	return false;
+      }
+      //check for more than one digit un line
+      if (horizontal_line[tmp]) {
+	info << tmp << " is already set in line " << i << ".";
+	return false;
+      }
       horizontal_line[tmp] = true;
-      //verticals
+
+      //verticals (columns)
+
       tmp = block_[j][i].get() - 1;
-      if (tmp < 0 || vertical_line[tmp] == true)
+      //check for empty block
+      if (tmp == - 1) {
+	info << "Grid is incomplete.";
 	return false;
+      }
+      //check for crazy digits
+      if (tmp < 0 || tmp > GRID_SIDE) {
+	info << "Bad value " << tmp << " in (" << j + 1 << "," << i + 1
+	     << ")." << std::endl;
+	return false;
+      }
+      //check for more than one digit un line
+      if (vertical_line[tmp]) {
+	info << tmp << " is already set in column " << i << ".";
+	return false;
+      }
       vertical_line[tmp] = true;
     }
+    //check if lines and columns have all digits
     for (int j = 0; j < GRID_SIDE; ++j)
-      if (!vertical_line[j] || !horizontal_line[j])
+      if (!vertical_line[j]) {
+	info << "Vertical line " << j + 1 << " is not full.";
 	return false;
+      }
+      else if (!horizontal_line[j]) {
+	info << "Horizontal line " << j + 1 << "is not full.";
+	return false;
+      }
   }
-  std::cout << "sex" << std::endl;
   // check nine blocks (use vertical_block)
-  for (int j = 0; j < GRID_SIDE; ++j)
-    vertical_line[j] = false;
   for (int i = 0; i < GRID_SIDE; i += 3)
-    for (int j = 0; j < GRID_SIDE; j += 3)
+    for (int j = 0; j < GRID_SIDE; j += 3) {
+      for (int k = 0; k < GRID_SIDE; ++k)
+	vertical_line[k] = false;
       for (int k = 0; k < 3; ++k)
 	for (int l = 0; l < 3; ++l) {
 	  tmp = block_[i + k][j + l].get() - 1;
-	  if (tmp < 0 || vertical_line[tmp] == true)
+	  assert(tmp >= 0 && tmp < GRID_SIDE);
+	  if (vertical_line[tmp] == true)
 	    return false;
 	  vertical_line[tmp] = true;
 	}
-  std::cout << "city" << std::endl;
+    }
   for (int j = 0; j < GRID_SIDE; ++j)
     if (!vertical_line[j])
       return false;
+  return true;
+}
+
+bool Grid::operator==(const Grid &b) const
+{
+  for (int x = 0; x < GRID_SIDE; ++x)
+    for (int y = 0; y < GRID_SIDE; ++y)
+      if (this->block_[x][y].get() != b.block_[x][y].get())
+	return false;
   return true;
 }
