@@ -138,21 +138,23 @@ int Grid::solve_square()
   int posed = 0;
 
   for (int v = 1; v <= GRID_SIDE; ++v)
-    for (int i = 0; i < GRID_SIDE; i += 3)
-      for (int j = 0; j < GRID_SIDE; j += 3) {
+    for (int y = 0; y < GRID_SIDE; y += 3)
+      for (int x = 0; x < GRID_SIDE; x += 3) {
 	int v_count = 0;
-	int x,y;
-	for (int k = i; k < 3; ++k)
-	  for (int l = j; l < 3; ++l)
-	    if (!block_[k][l].is_forbidden(v)) {
-	      x = k;
-	      y = l;
+	int last_x, last_y;
+	for (int y2 = y; y2 < y + 3; ++y2)
+	  for (int x2 = x; x2 < x + 3; ++x2)
+	    if (!block_[x2][y2].is_forbidden(v)) {
+	      last_x = x2;
+	      last_y = y2;
 	      ++v_count;
 	    }
+	std::cout << "block: (" << x << "," << y << "), val: " << v 
+		  << ", v_count: " << v_count << std::endl;
 	if (v_count == 1) {
-	  std::cerr << "found " << v << " with solve_square in (" << x + 1
-		    << "," << y + 1 << ")\n";
-	  pose(x, y, v);
+	  std::cerr << "found " << v << " with solve_square in (" << last_x + 1
+		    << "," << last_y + 1 << ")\n";
+	  pose(last_x, last_y, v);
 	  ++posed;
 	}
       }
@@ -187,6 +189,7 @@ int Grid::solve_line()
 	++posed;
       }
       if (vertical_count == 1) {
+	//dont pose the same number two times
 	if (!(horizontal_x == vertical_x && horizontal_y == vertical_y)) {
 	  std::cerr << "found " << v << " with solve_line_v in ("
 		    << vertical_x + 1
@@ -215,7 +218,7 @@ void Grid::print() const
 	  std::cout << "|";
 	  for (int j = i * 3 + 1; j <= i * 3 + 3; ++j)
 	    if (block_[x][y].get() == j)
-	      std::cout << "\033[0;32m" << j << "\033[0m";
+	      std::cout << "\033[1;32m" << j << "\033[0m";
 	    else if (block_[x][y].is_forbidden(j))
 	      std::cout << "\033[0;31m" << j << "\033[0m";
 	    else
