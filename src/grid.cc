@@ -117,12 +117,12 @@ int Grid::solve_complete_block()
     for (int x = 0; x < GRID_SIDE; ++x) {
       if (block_[x][y].is_set())
 	continue;
-      int count = 0, lastval;
+      int count = 0, lastval = -1;
       for (int i = 1; i <= GRID_SIDE; ++i)
 	if (!block_[x][y].is_forbidden(i)) {
 	  ++count;
 	  lastval = i;
-	  }
+	}
       if (count == 1) {
 	pose(x, y, lastval);
 	if (Grid::verbose)
@@ -141,7 +141,7 @@ int Grid::solve_square()
     for (int y = 0; y < GRID_SIDE; y += 3)
       for (int x = 0; x < GRID_SIDE; x += 3) {
 	int v_count = 0;
-	int last_x, last_y;
+	int last_x = -1, last_y = -1;
 	for (int y2 = y; y2 < y + 3; ++y2)
 	  for (int x2 = x; x2 < x + 3; ++x2)
 	    if (!block_[x2][y2].is_forbidden(v)) {
@@ -167,8 +167,8 @@ int Grid::solve_line()
 
   for (int v = 1; v <= GRID_SIDE; ++v) //each val
     for (int i = 0; i < GRID_SIDE; ++i) { //each line and column
-      int horizontal_count = 0, horizontal_x, horizontal_y;
-      int vertical_count = 0, vertical_x, vertical_y;
+      int horizontal_count = 0, horizontal_x = -1, horizontal_y = -1;
+      int vertical_count = 0, vertical_x = -1, vertical_y = -1;
       for (int j = 0; j < GRID_SIDE; ++j) {
 	if (!block_[i][j].is_forbidden(v)) {
 	  horizontal_x = i;
@@ -218,11 +218,11 @@ void Grid::print() const
 	  std::cout << "|";
 	  for (int j = i * 3 + 1; j <= i * 3 + 3; ++j)
 	    if (block_[x][y].get() == j)
-	      std::cout << "\033[1;32m" << j << "\033[0m";
+	      std::cout << "\033[1;34m" << j << "\033[0m";
 	    else if (block_[x][y].is_forbidden(j))
 	      std::cout << "\033[0;31m" << j << "\033[0m";
 	    else
-	      std::cout << j;
+	      std::cout << "\033[0;32m" << j << "\033[0m";
 	}
 	std::cout <<  "|" << std::endl;
       }
